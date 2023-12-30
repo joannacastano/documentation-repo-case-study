@@ -22,7 +22,7 @@ Kubernetes is a free and open-source tool for managing containerized application
 In this case study, we used Kubernetes as our orchestration platform for deploying our web app and database, along with services such as Jenkins, Prometheus, and Splunk.
 As you go through this document, you will learn more about the services I mentioned above. For now, look at the steps below to access the Kubernetes cluster.
 
-==DISCLAIMER==: We used MacOS when creating this solution. For other operating systems, ignore steps 1 and 2. Refer to the [Official Kubernetes Documentation](https://kubernetes.io/docs/tasks/tools/) for installing kubectl in [Linux](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) or [Windows](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/).
+**DISCLAIMER**: We used MacOS when creating this solution. For other operating systems, ignore steps 1 and 2. Refer to the [Official Kubernetes Documentation](https://kubernetes.io/docs/tasks/tools/) for installing kubectl in [Linux](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) or [Windows](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/).
 
 **Step 1** Install HomeBrew
 ```
@@ -160,7 +160,7 @@ We created a simple To-do app that has authentication and can do CRUD processes.
 
 **Step 1** Create a flask environment by following this [guide from Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask).
 
-However for this solution, ==app.py== should look like this:
+However for this solution, **app.py** should look like this:
 
 ```
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
@@ -331,7 +331,7 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 ```
-==IMPORTANT NOTE:== The file **config.py** holds the SECRET_KEY for this app. You may create your own **config.py** and the SECRET_KEY can be any string. This file is hidden from you for data privacy.
+**IMPORTANT NOTE:** The file **config.py** holds the SECRET_KEY for this app. You may create your own **config.py** and the SECRET_KEY can be any string. This file is hidden from you for data privacy.
 
 **Step 2** Create a **templates** folder inside the project's folder and add the html files for the web pages.
 
