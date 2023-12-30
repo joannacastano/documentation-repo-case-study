@@ -2,8 +2,7 @@
 This case study provides an extensive overview of the procedure involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, configuring a Git repository, creating Docker images, deploying and configuring Cassandra, as well as orchestrating Jenkins, Prometheus, Grafana, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
 
 Although having some knowledge of distributed systems and Kubernetes is advantageous, our goal is to enable readers with different degrees of expertise. A glossary is included in the final section of this document for convenient reference.
-```
-```
+<br>
 ### Learning Objectives
 
 [x] **Deployment and Integration:** Gain the ability to integrate and deploy a web application that utilizes a Cassandra NoSQL database on a dynamic Kubernetes framework.
@@ -14,8 +13,8 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 
 [x] **Ops Simulation:** Deliberately introduce errors to the system to replicate operational accidents and routine maintenance scenarios.
 
-```
-```
+<br>
+
 ## Methodology
 ### A. Accessing the Kubernetes Cluster
 
@@ -148,6 +147,8 @@ Please use the following password to proceed to installation:
 <br>
 
 ### C. Deploying Cassandra
+
+Cassandra is a NoSQL database. Its query language is very similar to SQL, however its structure is entirely different. It is designed to handle large amounts of data with high reliability and scalability. This makes Cassandra an optimal database choice for scalable solutions.
 
 <br>
 
@@ -477,6 +478,10 @@ passlib==1.7.4
 
 ### E. Deploying and Configuring Prometheus
 
+Prometheus is an open-source alerting and monitoring toolkit that provides real-time application and system health metrics. It aids developers and administrators in understanding their app's behavior and performance by giving valuable insights to ensure the system is at its peak performance.
+
+In this case study, Prometheus will be gathering various metrics from the web app, database, and the Kubernetes cluster itself.
+
 <br>
 
 ### F. Deploying and Configuring Splunk
@@ -484,12 +489,13 @@ passlib==1.7.4
 <br>
 
 ### G. Deploying and Configuring Grafana
-```
-```
+
+<br>
+
 ## Runbook
 
-```
-```
+<br>
+
 ## Glossary
 
 - Automation
@@ -500,6 +506,7 @@ passlib==1.7.4
 - Dependencies
 - Framework
 - Image
+- Keyspace
 - Nodes
 - Pipelines
 - Pods
