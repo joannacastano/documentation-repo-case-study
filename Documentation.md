@@ -1,5 +1,5 @@
 # Databases: Web Application Integration with a Cassandra NoSQL Database 
-This case study provides an extensive overview of the procedure involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, configuring a Git repository, creating Docker images, deploying and configuring Cassandra, as well as orchestrating Jenkins, Prometheus, Grafana, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
+This case study provides an extensive overview of the procedure involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, configuring a Git repository, creating Docker images, deploying and configuring Cassandra, as well as orchestrating Jenkins, Prometheus, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
 
 Although having some knowledge of distributed systems and Kubernetes is advantageous, our goal is to enable readers with different degrees of expertise. A glossary is included in the final section of this document for convenient reference.
 <br>
@@ -9,7 +9,7 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 
 [x] **Automation with Jenkins CI/CD:** Investigate the automation capabilities through the implementation of Jenkins CI/CD solutions, which optimize the deployment workflow.
 
-[x] **Logging and Monitoring:** Operationalize logging and monitoring solutions utilizing Splunk, Prometheus, and Grafana, to ensure that the database and web application operate constantly.
+[x] **Logging and Monitoring:** Operationalize logging and monitoring solutions utilizing Splunk and Prometheus, to ensure that the database and web application operate constantly.
 
 [x] **Ops Simulation:** Deliberately introduce errors to the system to replicate operational accidents and routine maintenance scenarios.
 
@@ -19,7 +19,7 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 ### A. Accessing the Kubernetes Cluster
 
 Kubernetes is a free and open-source tool for managing containerized applications. In the technical world, Kubernetes is called an "orchestration engine" as it orchestrates the deployment, scaling, and handling of the application/system, much like a maestro with its orchestra.
-In this case study, we used Kubernetes as our orchestration platform for deploying our web app and database, along with services such as Jenkins, Prometheus, Splunk, and Grafana.
+In this case study, we used Kubernetes as our orchestration platform for deploying our web app and database, along with services such as Jenkins, Prometheus, and Splunk.
 As you go through this document, you will learn more about the services I mentioned above. For now, look at the steps below to access the Kubernetes cluster.
 
 ==DISCLAIMER==: We used MacOS when creating this solution. For other operating systems, ignore steps 1 and 2. Refer to the [Official Kubernetes Documentation](https://kubernetes.io/docs/tasks/tools/) for installing kubectl in [Linux](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) or [Windows](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/).
@@ -488,10 +488,6 @@ In this case study, Prometheus will be gathering various metrics from the web ap
 
 <br>
 
-### G. Deploying and Configuring Grafana
-
-<br>
-
 ## Runbook
 
 <br>
@@ -503,6 +499,7 @@ In this case study, Prometheus will be gathering various metrics from the web ap
 - Cluster
 - Containers
 - CRUD
+- Dashboard
 - Dependencies
 - Framework
 - Image
