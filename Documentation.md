@@ -488,6 +488,24 @@ The following steps are taken from the [Grafana Document for Installing the Prom
 ```
 $ kubectl create -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/bundle.yaml
 ```
+Verify if the Prometheus Operator installed successfully. Look for the *prometheus-operator* under the name field.
+```
+$ kubectl get deploy
+```
+- **Step 2** Configure Prometheus RBAC Permissions.
+  - **2.a** Create a directory for your Kubernetes manifests and navigate to it.
+```
+$ mkdir operator_k8s
+$ cd operator_k8s
+```
+  - **2.b** Create a manifest file called **prom_rbac.yaml** inside your created directory
+  - **2.c** Create the object
+- **Step 3** Deploy Prometheus
+  - **3.a** Create a prometheus.yaml manifest file
+  - **3.b** Deploy the manifest
+  - **3.c** Verify the deployment
+  - **3.d** Check underlying pods
+- **Step 4** Create a Prometheus servicw
 ### F. Deploying and Configuring Splunk
 
 <br>
