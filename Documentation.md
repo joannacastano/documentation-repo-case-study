@@ -24,19 +24,19 @@ As you go through this document, you will learn more about the services I mentio
 
 **DISCLAIMER**: We used MacOS when creating this solution. For other operating systems, ignore steps 1 and 2. Refer to the [Official Kubernetes Documentation](https://kubernetes.io/docs/tasks/tools/) for installing kubectl in [Linux](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) or [Windows](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/).
 
-**Step 1** Install HomeBrew
+- **Step 1** Install HomeBrew
 ```
  $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
-**Step 2** Install the kubectl CLI in your local
+- **Step 2** Install the kubectl CLI in your local
 ```
 $ brew install kubernetes-cli 
 ```
-**Step 3** Check if the Installation is successful
+- **Step 3** Check if the Installation is successful
 ```
 $ kubectl version –client 
 ```
-**Step 4** Export kubeconfig as root user
+- **Step 4** Export kubeconfig as root user
 ```
 # export KUBECONFIG=~/a2t-pe-cs1-F-kubeconfig.yaml
 ```
@@ -52,7 +52,7 @@ Jenkins is an open-source automation tool that enables continuous integration an
 
 For this solution, we used Jenkins to build and deploy the web app, and as a tool for managing codebase changes and redeployment. Specifically, Jenkins is responsible for building the web app Docker image and deploying it to the Kubernetes cluster. If there are changes in the application's codebase in our GitHub repository, Jenkins will trigger workflows/pipelines to rebuild and redeploy the image.
 
-**Step 1** Create Jenkins Deployment using a yaml file.You may name it anything you prefer, but for readability we'll name this **jenkins-deployment.yaml**
+- **Step 1** Create Jenkins Deployment using a yaml file.You may name it anything you prefer, but for readability we'll name this **jenkins-deployment.yaml**
 
 ```
 apiVersion: apps/v1
@@ -89,7 +89,7 @@ You may check if Jenkins was successfully deployed by running:
 ```
 $ kubectl get deployments.apps
 ```
-**Step 2** Create Jenkins Service using yaml file. For readability, we'll name it **jenkins-service.yaml**.
+- **Step 2** Create Jenkins Service using yaml file. For readability, we'll name it **jenkins-service.yaml**.
 
 ```
 apiVersion: v1
@@ -125,7 +125,7 @@ Then, run the following command:
 ```
 $ kubectl create –f jenkins-service.yaml
 ```
-**Step 3** Access the UI by looking for the host node's *external IP* and through the configured *nodePort* in the jenkins-service.yaml
+- **Step 3** Access the UI by looking for the host node's *external IP* and through the configured *nodePort* in the jenkins-service.yaml
 
 ```
 $ kubectl get pods -o wide
@@ -134,7 +134,7 @@ $ kubectl get nodes –o wide
 ```
 In our case, we can access the Jenkins web UI at *139.162.36.121:30979*.
 
-**Step 4** You will be asked for the Administrator Password. To access this, inspect the jenkin pod's logs. You can see the full pod's name from running the *get pods* command in the previous step.
+- **Step 4** You will be asked for the Administrator Password. To access this, inspect the jenkin pod's logs. You can see the full pod's name from running the *get pods* command in the previous step.
 ```
 $ kubectl logs jenkins-<some string>
 ```
@@ -143,7 +143,7 @@ Look for this line in the logs:
 Jenkins initial setup is required. An admin user has been created and a password generated.
 Please use the following password to proceed to installation:
 ```
-**Step 5** Install plugins. You will be redirected to the plugins page upon successful authentication. 
+- **Step 5** Install plugins. You will be redirected to the plugins page upon successful authentication. 
 <br>
 
 ### C. Deploying Cassandra
@@ -158,7 +158,7 @@ Since we had the freedom to choose any framework in creating the web application
 
 We created a simple To-do app that has authentication and can do CRUD processes.
 
-**Step 1** Create a flask environment by following this [guide from Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask).
+- **Step 1** Create a flask environment by following this [guide from Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask).
 
 However for this solution, **app.py** should look like this:
 
@@ -333,7 +333,7 @@ if __name__ == '__main__':
 ```
 **IMPORTANT NOTE:** The file **config.py** holds the SECRET_KEY for this app. You may create your own **config.py** and the SECRET_KEY can be any string. This file is hidden from you for data privacy.
 
-**Step 2** Create a **templates** folder inside the project's folder and add the html files for the web pages.
+- **Step 2** Create a **templates** folder inside the project's folder and add the html files for the web pages.
 
 **login.html**
 ```
@@ -431,7 +431,7 @@ if __name__ == '__main__':
 </html>
 ```
 
-**Step 3** Create a Dockerfile. This file must only be named **Dockerfile** without any file extensions. We need this in order to create a Docker image of our app.
+- **Step 3** Create a Dockerfile. This file must only be named **Dockerfile** without any file extensions. We need this in order to create a Docker image of our app.
 
 ```
 FROM python:3.11
@@ -464,7 +464,7 @@ EXPOSE 5000
 # Command to run the application
 CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
 ```
-**Step 4** Create the **requirements.txt** file. This file holds all the dependencies we need to create the Docker image.
+- **Step 4** Create the **requirements.txt** file. This file holds all the dependencies we need to create the Docker image.
 
 ```
 flask==3.0.0
@@ -482,8 +482,12 @@ Prometheus is an open-source alerting and monitoring toolkit that provides real-
 
 In this case study, Prometheus will be gathering various metrics from the web app, database, and the Kubernetes cluster itself.
 
+The following steps are taken from the [Grafana Document for Installing the Prometheus Operator](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/configure-infrastructure-manually/prometheus/prometheus-operator/#create-a-prometheus-service)
 <br>
-
+- **Step 1** Install Splunk Operator using the **bundle.yaml** file from the Prometheus Operator GitHub repository.
+```
+$ kubectl create -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/bundle.yaml
+```
 ### F. Deploying and Configuring Splunk
 
 <br>
