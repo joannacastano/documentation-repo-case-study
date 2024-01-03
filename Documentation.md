@@ -777,10 +777,299 @@ passlib==1.7.4
 
 #### D.1 Build and deployment through Jenkins
 
+- **Step 1** Creating a job
+  - **Step 1.a** Create a New Job by click *+ New Item* in the Jenkins Home Dashboard.
+  - **Step 1.b** Choose **Multibranch Pipeline** as the Project Type and click *OK*
+  - **Step 1.c** Locate **Branch Sources** and Click on Add source.
+  - **Step 1.d** Select **GitHub**
+    
+- **Step 2** Add Credentials
+  - **Step 2.a** In the Branch Sources look for **Credentials** and click *Add* to add credentials, then choose Jenkins.
+  - **Step 2.b** Copy and Paste the HTTPS Repository URL from Github
+  - **Step 2.c** Under the **Kind** section dropdown, select *Username with Password*
+  - **Step 2.d** Enter in the username your email used to login to Github and Specify ID name (eg. Sample-ID)
+  - **Step 2.e** To get the *password*, follow the steps in the [Official Github Documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token) to get your personal access **token**. Use the generated token as your password.
+ 
+- **Step 3** Continue setting up the job by selecting **All Branches** under the *Behaviors* dropdown.
+- **Step 4** Under the Branch Sources go over the Checkout over SSH. Select **SSH Credential to Access Private Repo** and add credentials for GitHub SSH
+- **Step 5** In your terminal, connect to your jenkins pod using the command below:
+```
+$ kubectl exec -it <pod-name> – /bin/bash
+```
+  - **Step 5.a** Generate ssh keys
+  ```
+  $ ssh-keygen -t ed25519 -C "email address"
+  ```
+  The private key is stored in the file */var/lib/jenkins/.ssh/id_ed25519*
+  The public key is stored in the file */var/lib/jenkins/.ssh/id_ed25519.pub*
+  - **Step 5.b** Configure GitHub SSH key using the generated public key by following the steps below:
+  ```
+  - Go to https://github.com/, click on profile photo, then Settings:
+  - Click on SSH and GPG keys link on the left hand side bar:
+  - Click on the New SSH key button. On the next screen, for Title, enter something meaningful such as ssh-private-repo; for Key, enter the public key we've generated.
+  - Click on Add SSH key, we will be asked for security confirmation. Once completed, the next screen shows our new key added:
+
+  Note the key fingerprint generated (This starts at SHA256…)
+  ```
+- **Step 6** Create a new Jenkins credential using the generated private key. Follow the steps below:
+  ```
+  - Go to Dashboards /Manage Jenkins /Credentials
+  - Click on Global
+  - Add Credentials
+  ```
+  - ID: name which is the value of the Title for GitHub SSH key discussed.
+  - Description: something meaningful. E.g. SSH credential to access private repos. This will become an entry in the credential selection list later on.
+  - Username: this is the email we use to log into GitHub with.
+  - Private Key: check Enter directly, then click on the Add button, copy and paste in the private key we've generated previously.
+  - Passphrase: this is the passphrase we've specified when generating the key in jenkins pod.
+
+- **Step 7** Create a Jenkins project to access a private repo. Navigate to your GitHub and copy the repository SSH Link.
+- **Step 8** Use the credentials in any jobs/projects 
+- **Step 9** Setup Pipeline
+  - #Declare
+    
+  - #Build Stage
+  - #Push Stage
+  - #Deploy Stable web app
+  - #Deploy Canary
+  - #Build Success Test
+  - #Canary Production
+
+
 <br>
 
 ### E. Deploying Prometheus with Grafana for Dashboards
-
+**Prometheus** is an open-source alerting and monitoring toolkit that provides real-time application and system health metrics. It aids developers and administrators in understanding their app's behavior and performance by giving valuable insights to ensure the system is at its peak performance.
+ 
+In this case study, Prometheus will be gathering various metrics from the web app, database, and the Kubernetes cluster itself.
+ 
+- **Step 1**: Add helm repo
+    ```
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    ```
+- **Step2**: Run helm repo update which updates our local repository with the latest version.
+    ```
+    helm repo update
+    ```
+- **Step3**: Create a namespace for all of our components that are included with this chart.
+    ```
+    kubectl create namespace monitoring
+    ```
+- **Step4**: Create a values file to hold our future helm values.
+    ```
+    fullnameOverride: prometheus
+    defaultRules:
+    create: true
+    rules:
+        alertmanager: true
+        etcd: true
+        configReloaders: true
+        general: true
+        k8s: true
+        kubeApiserverAvailability: true
+        kubeApiserverBurnrate: true
+        kubeApiserverHistogram: true
+        kubeApiserverSlos: true
+        kubelet: true
+        kubeProxy: true
+        kubePrometheusGeneral: true
+        kubePrometheusNodeRecording: true
+        kubernetesApps: true
+        kubernetesResources: true
+        kubernetesStorage: true
+        kubernetesSystem: true
+        kubeScheduler: true
+        kubeStateMetrics: true
+        network: true
+        node: true
+        nodeExporterAlerting: true
+        nodeExporterRecording: true
+        prometheus: true
+        prometheusOperator: true
+    alertmanager:
+        fullnameOverride: alertmanager
+        enabled: true
+        ingress:
+        enabled: false
+    grafana:
+        enabled: true
+        fullnameOverride: grafana
+        forceDeployDatasources: false
+        forceDeployDashboards: false
+        defaultDashboardsEnabled: true
+        defaultDashboardsTimezone: utc
+        serviceMonitor:
+            enabled: true
+         admin:
+         existingSecret: grafana-admin-credentials
+         userKey: admin-user
+         passwordKey: admin-password
+    kubeApiServer:
+        enabled: true
+    kubelet:
+        enabled: true
+        serviceMonitor:
+            metricRelabelings:
+                - action: replace
+                sourceLabels:
+                    - node
+                targetLabel: instance
+    kubeControllerManager:
+    enabled: true
+    endpoints: # ips of servers
+        - 192.168.30.38
+        - 192.168.30.39
+        - 192.168.30.40
+    coreDns:
+        enabled: true
+    kubeDns:
+        enabled: false
+    kubeEtcd:
+        enabled: true
+        endpoints: # ips of servers
+        - 192.168.30.38
+        - 192.168.30.39
+        - 192.168.30.40
+        service:
+            enabled: true
+            port: 2381
+            targetPort: 2381
+    kubeScheduler:
+        enabled: true
+        endpoints: # ips of servers
+            - 192.168.30.38
+            - 192.168.30.39
+            - 192.168.30.40
+    kubeProxy:
+        enabled: true
+        endpoints: # ips of servers
+            - 192.168.30.38
+            - 192.168.30.39
+            - 192.168.30.40
+    kubeStateMetrics:
+        enabled: true
+    kube-state-metrics:
+        fullnameOverride: kube-state-metrics
+        selfMonitor:
+            enabled: true
+        prometheus:
+            monitor:
+            enabled: true
+            relabelings:
+                - action: replace
+                  regex: (.*)
+                  replacement: $1
+                  sourceLabels:
+                    - __meta_kubernetes_pod_node_name
+                  targetLabel: kubernetes_node
+    nodeExporter:
+    enabled: true
+    serviceMonitor:
+        relabelings:
+            - action: replace
+            regex: (.*)
+            replacement: $1
+            sourceLabels:
+                - __meta_kubernetes_pod_node_name
+            targetLabel: kubernetes_node
+    prometheus-node-exporter:
+        fullnameOverride: node-exporter
+        podLabels:
+            jobLabel: node-exporter
+        extraArgs:
+            - --collector.filesystem.mount-points-
+    exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+            - --collector.filesystem.fs-types-
+    exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusect
+    l|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|
+    selinuxfs|squashfs|sysfs|tracefs)$
+    service:
+        portName: http-metrics
+    prometheus:
+        monitor:
+        enabled: true
+        relabelings:
+            - action: replace
+              regex: (.*)
+              replacement: $1
+              sourceLabels:
+                - __meta_kubernetes_pod_node_name
+              targetLabel: kubernetes_node
+    resources:
+    requests:
+        memory: 512Mi
+        cpu: 250m
+    limits:
+        memory: 2048Mi
+    prometheusOperator:
+        enabled: true
+        prometheusConfigReloader:
+            resources:
+                requests:
+                cpu: 200m
+                memory: 50Mi
+                limits:
+                memory: 100Mi
+    prometheus:
+        enabled: true
+        prometheusSpec:
+        replicas: 1
+        replicaExternalLabelName: "replica"
+        ruleSelectorNilUsesHelmValues: false
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+        retention: 6h
+        enableAdminAPI: true
+        walCompression: true
+    thanosRuler:
+        enabled: false
+    ```
+ 
+    **Step 5**: Create a secret for Grafana login credentials.
+ 
+    ```
+    echo -n 'adminuser' > ./admin-user # change your username
+    echo -n 'p@ssword!' > ./admin-password # change your password
+    ```
+ 
+    **Step 6**: Create a Kubernetes Secret.
+    ```
+         kubectl create secret generic grafana-admin-credentials --from-file=./admin-user --from-file=admin-password -n monitoring
+    ```
+ 
+    **Step 7**: Create kube-prometheus-stack.
+    ```
+    helm install -n monitoring prometheus prometheus-community/kube-prometheus-stack -f values.yaml
+    ```
+ 
+    **Step 8**: Make Prometheus UI accessible outside the Kubernetes cluster.
+    - Access the Prometheus service in your namespace.
+    ```
+    $ kubectl edit sec prometheus-kube-prometheus-prometheus -n monitor
+    ```
+    - Expose the Prometheus service by changing the spec type of it into NodePort.
+ 
+      ![Node Port](https://drive.google.com/uc?export=view&id=1ttMwZ3GbLS2_3YWk_l4g0eEJMkLrgg5C)
+ 
+    - Use the IP and NodePort to access Prometheus.
+ 
+        - http://172.104.167.240:31326/
+ 
+    This provides a [Prometheus Time Series Collection and Processing Server Prometheus Time Series Collection and Processing Server](http://172.104.167.240:31326/targets?search=) for quick reference.
+ 
+    **Step 9**: Make Grafana UI accessible outside the Kubernetes cluster
+    - Access the grafana service in your namespace.
+        ```
+        kubectl edit svc grafana -n monitoring
+        ```
+    - Expose the grafana service by changing the spec type of it into NodePort.
+ 
+      ![Node Port](https://drive.google.com/uc?export=view&id=1-qG4HVnHPY9ykpIivjqNgMKnViGYWE05)
+ 
+      ![Node Port](https://drive.google.com/uc?export=view&id=1EL-9PWf_FWyuKgcFunYCzc8YHCuaD-Sx)
+ 
+        This link provides a [Grafana Dashboard](http://139.162.18.85:30508/dashboards) for quick reference.
 
 
 <br>
@@ -1009,6 +1298,7 @@ helm -n splunk-operator install my-splunk-otel-collector -f /Users/acadb517/otel
 ## Runbook
 
 - [Jenkins](https://drive.google.com/file/d/1VE_nT_8cCrNpWyErYqRWaPw6ZOomLRgQ/view?usp=share_link)
+- [Prometheus](http://172.104.167.240:31326/)
 
 <br>
 
