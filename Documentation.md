@@ -1,5 +1,9 @@
 # Databases: Web Application Integration with a Cassandra NoSQL Database 
-This case study provides an extensive overview of the procedures involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, creating the web app and its Docker image, deploying and configuring the Cassandra database image, as well as orchestrating Jenkins, Prometheus, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
+```
+Adviser: Melvin Bautista
+Proponents: Louis Anthony Bernante, Joanna Lorraine Castaño, Lorenzo Lucin Jr., Joshua Villa
+```
+This case study provides an extensive overview of the procedures involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, creating the web app and its Docker image, deploying and configuring the Cassandra database image, as well as orchestrating Jenkins, Prometheus, Grafana, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
 
 Although having some knowledge of distributed systems and Kubernetes is advantageous, our goal is to enable readers with different degrees of expertise. A glossary is included in the final section of this document for convenient reference.
 <br>
@@ -14,12 +18,11 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 [x] **Ops Simulation:** Deliberately introduce errors to the system to replicate operational accidents and routine maintenance scenarios.
 
 <br>
-
 ## Methodology
-### A. Accessing the Kubernetes Cluster
 
+### A. Accessing the Kubernetes Cluster
 Kubernetes is a free and open-source tool for managing containerized applications. In the technical world, Kubernetes is called an "orchestration engine" as it orchestrates the deployment, scaling, and handling of the application/system, much like a maestro with its orchestra.
-In this case study, we used Kubernetes as our orchestration platform for deploying our web app and database, along with services such as Jenkins, Prometheus, and Splunk.
+In this case study, we used Kubernetes as our orchestration platform for deploying our web app and database, along with services such as Jenkins, Prometheus, Grafana, and Splunk.
 As you go through this document, you will learn more about the services I mentioned above. For now, look at the steps below to access the Kubernetes cluster.
 
 **DISCLAIMER**: We used MacOS when creating this solution. For other operating systems, ignore steps 1 and 2. Refer to the [Official Kubernetes Documentation](https://kubernetes.io/docs/tasks/tools/) for installing kubectl in [Linux](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) or [Windows](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/).
@@ -276,7 +279,6 @@ spec:
     **NOTE:** The fields *spec.spec.image*, *metadata.name* (in StorageClass), and *provisioner* (in StorageClass) are modified according to the cloud environment provisioner utilized in our cluster. Specifically, we're utilizing a custom Cassandra image on Kubernetes in our scenario with the provisioner linodebs.csi.linode.com and a storage class of linode-block-storage. To determine the cloud provider, examine the configuration and metadata available to the cluster. More information regarding the ways to identify the cloud environment can be found in section C.1.
 
     Below is the Dockerfile of our custom Cassandra image. A custom image was made so we could install and have a python package in our Cassandra deployment. We'll need this for running Cassandra Query Language in its shell.
-
     ```
     #!/bin/bash
     # Use the official Cassandra base image for AMD64
@@ -315,7 +317,6 @@ spec:
     ```
 - **Step 3** (Optional) Scale the Cassandra StatefulSet
 In Kubernetes, scaling a StatefulSet entails adding or decreasing the number of replicas (pods) for the StatefulSet. Scaling the StatefulSet in the context of Cassandra operating in Kubernetes allows you to add or remove Cassandra nodes to adjust to changes in workload, performance requirements, or other operational demands.
-
 ```
 $ kubectl scale statefulsets <stateful-set-name> --replicas=<new-replicas>
 ```
@@ -326,7 +327,7 @@ To connect Cassandra nodes in a cluster, update the cassandra.yaml configuration
 
 [](https://drive.google.com/file/d/1h2RG4JZUR4BSdyvOZ-L2Ul0Y03z5-Fmi/view?usp=share_link)
 
-Scroll down till you locate the seed_provider section and edit the seeds with the actual IP address assigned to each cassandra pods.
+Scroll down until you locate the *seed_provider* section and edit the seeds with the actual IP address assigned to each cassandra pods.
 
 Lookup the IP address of the cassandra prods:
 
@@ -335,11 +336,11 @@ $ kubectl get pods -o wide
 ```
 
 - **Step 5** Configure the cassandra.yaml file inside the pod.
-   - **Step 5.a** Copy cassandra.yaml from the pod to your local machine for it    to be edit
+   - **Step 5.a** Copy cassandra.yaml from the pod to your local machine for it to be edit
      ```
      $ kubectl cp <your-cassandra-pod-name>:/etc/cassandra/cassandra.yaml ./cassandra.yaml
      ```
-   - **Step 5.b** Edit the cassandra.yaml file on your local machine using your    preferred text editor
+   - **Step 5.b** Edit the cassandra.yaml file on your local machine using your preferred text editor
    - **Step 5.c** Move the edited file back to the pod
      ```
      $ kubectl cp ./cassandra.yaml <your-cassandra-pod-name>:/etc/cassandra/cassandra.yaml
@@ -348,8 +349,7 @@ $ kubectl get pods -o wide
      ```
      $ kubectl exec -it -- /bin/bash Nodetool status
      ```
-   - **Step 5.e** Repeat this process for the other Cassandra pods to ensure       consistency. If you see all nodes in the "UN" state, it indicates that your       Cassandra pods are part of the same cluster.
-<br>
+   - **Step 5.e** Repeat this process for the other Cassandra pods to ensure       consistency. If you see all nodes in the "UN" state, it indicates that your Cassandra pods are part of the same cluster.
 
 #### C.1 Determining the cloud provider by examining the configuration and metadata available to the cluster.
 
@@ -358,7 +358,7 @@ $ kubectl get pods -o wide
 $ kubectl get nodes -o custom-columns=NAME:.metadata.name,PROVIDER:.spec.provider ID
 ```
 ![]()
-The output should look similar to this and look for the name of the provider, in our case it is linode.
+The output should look similar to this and look for the name of the provider, in our case it is Linode.
 
 - **Step 2** CheckInstalled CSI Driver:
 Verify that the Linode CSI driver is installed in your cluster. You can check the installed CSI drivers using the following command:
@@ -385,7 +385,6 @@ We created a simple To-do app that has authentication and can do CRUD processes.
 - **Step 1** Create a flask environment by following this [guide from Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask).
 
 However for this solution, **app.py** should look like this:
-
 ```
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 from cassandra.cluster import Cluster
@@ -552,7 +551,7 @@ else:
         return redirect(url_for('todolist'))
    
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True)          #This should be false when in production
 
 ```
 **IMPORTANT NOTE:** The file **config.py** holds the SECRET_KEY for this app. You may create your own **config.py** and the SECRET_KEY can be any string. This file is hidden from you for data privacy.
@@ -696,10 +695,9 @@ cassandra-driver==3.29.0
 passlib==1.7.4
 ```
 
-#### D.1 Building and deployment through Jenkins
+#### D.1 Build and deployment through Jenkins
 
 <br>
-
 ### E. Deploying and Configuring Prometheus
 
 Prometheus is an open-source alerting and monitoring toolkit that provides real-time application and system health metrics. It aids developers and administrators in understanding their app's behavior and performance by giving valuable insights to ensure the system is at its peak performance.
@@ -730,29 +728,42 @@ $ cd operator_k8s
   - **3.c** Verify the deployment
   - **3.d** Check underlying pods
 - **Step 4** Create a Prometheus service
+<br>
 ### F. Deploying and Configuring Splunk
 
 <br>
 
+### G. Building Dashboards with Grafana
+
+<br>
 ## Runbook
 
 <br>
 
 ## Glossary
 
-- Automation
-- CICD
-- Cluster
-- Containers
-- CRUD
-- Dashboard
-- Dependencies
-- Framework
-- Image
-- Keyspace
-- Nodes
-- Pipelines
-- Pods
-- Plugins
-- Repository
-- Yaml
+- **Automation**
+- **Cassandra ring**: Describes a resilient and distributed group of Cassandra nodes capable of handling faults.
+- **CICD**
+- **Cluster**
+- **Containers**
+- **CRUD**
+- **Database/Keyspace** (Cassandra)
+- **Dependencies**
+- **Dockerfile**
+- **Framework**
+- **Headless service** (Kubernetes): A headless service in Kubernetes is a service with a service IP but without load balancing. Each pod in the StatefulSet gets its DNS record, allowing direct communication between Cassandra nodes.
+- **Image**
+- **Load Balancer**
+- **Logs**
+- **Metrics**
+- **Node**
+- **NodePort**
+- **NoSQL**
+- **Pipelines**
+- **Pods**
+- **Plugins**
+- **Repository**
+- **Service** (Kubernetes): Service in kubernetes facilitates the communication between different parts of the application and others outside of it and assists us in establishing connections between apps and other apps or users.
+- **StatefulSet**: A Kubernetes controller that ensures the order and uniqueness of pods, particularly in the Cassandra context. This guarantees stable network identities and persistent storage for individual nodes in the cluster.
+- **YAML**
