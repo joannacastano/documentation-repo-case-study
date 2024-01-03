@@ -1,7 +1,7 @@
 # Databases: Web Application Integration with a Cassandra NoSQL Database 
 ```
-Adviser: Melvin Bautista
-Proponents: Louis Anthony Bernante, Joanna Lorraine Castaño, Lorenzo Lucin Jr., Joshua Villa
+Adviser: Melvin Bautista:
+Authors: Louis Anthony Bernante, Joanna Lorraine Castaño, Lorenzo Lucin Jr., Joshua Villa
 ```
 This case study provides an extensive overview of the procedures involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, creating the web app and its Docker image, deploying and configuring the Cassandra database image, as well as orchestrating Jenkins, Prometheus, Grafana, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
 
