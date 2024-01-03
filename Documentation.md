@@ -23,7 +23,7 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 
 ![](https://drive.google.com/uc?export=view&id=11B4mXvH01VnQhilh8F4uHxbtfElXHrPM)
 
-
+The image above depicts how our solution is set-up. We can observe that all of our services are deployed inside the Kubernetes cluster. The images of our flask application and Cassandra our built in Docker by Jenkins. However, only the Flask application is continously deployed in the Kubernetes cluster by Jenkins. Prometheus is our platform for gathering cluster metrics. On the other hand, Splunk is responsible for getting logs from the cluster and the application. We used Grafana to build dashboards for the metrics.
 
 <br>
 
@@ -779,36 +779,10 @@ passlib==1.7.4
 
 <br>
 
-### E. Deploying and Configuring Prometheus
+### E. Deploying Prometheus with Grafana for Dashboards
 
-Prometheus is an open-source alerting and monitoring toolkit that provides real-time application and system health metrics. It aids developers and administrators in understanding their app's behavior and performance by giving valuable insights to ensure the system is at its peak performance.
 
-In this case study, Prometheus will be gathering various metrics from the web app, database, and the Kubernetes cluster itself.
 
-The following steps are taken from the [Grafana Document for Installing the Prometheus Operator](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/configure-infrastructure-manually/prometheus/prometheus-operator/#create-a-prometheus-service)
-<br>
-- **Step 1** Install Splunk Operator using the **bundle.yaml** file from the Prometheus Operator GitHub repository.
-```
-$ kubectl create -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/bundle.yaml
-```
-Verify if the Prometheus Operator installed successfully. Look for the *prometheus-operator* under the name field.
-```
-$ kubectl get deploy
-```
-- **Step 2** Configure Prometheus RBAC Permissions.
-  - **2.a** Create a directory for your Kubernetes manifests and navigate to it.
-```
-$ mkdir operator_k8s
-$ cd operator_k8s
-```
-  - **2.b** Create a manifest file called **prom_rbac.yaml** inside your created directory
-  - **2.c** Create the object
-- **Step 3** Deploy Prometheus
-  - **3.a** Create a prometheus.yaml manifest file
-  - **3.b** Deploy the manifest
-  - **3.c** Verify the deployment
-  - **3.d** Check underlying pods
-- **Step 4** Create a Prometheus service
 <br>
 
 ### F. Deploying and Configuring Splunk
@@ -1032,11 +1006,9 @@ helm -n splunk-operator install my-splunk-otel-collector -f /Users/acadb517/otel
  
 <br>
 
-### G. Building Dashboards with Grafana
-
-<br>
-
 ## Runbook
+
+- [Jenkins](https://drive.google.com/file/d/1VE_nT_8cCrNpWyErYqRWaPw6ZOomLRgQ/view?usp=share_link)
 
 <br>
 
