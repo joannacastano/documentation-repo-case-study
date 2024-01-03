@@ -19,6 +19,14 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 
 <br>
 
+## System Architecture
+
+![](https://drive.google.com/uc?export=view&id=11B4mXvH01VnQhilh8F4uHxbtfElXHrPM)
+
+
+
+<br>
+
 ## Methodology
 
 ### A. Accessing the Kubernetes Cluster
@@ -326,9 +334,11 @@ The presence of Cassandra pods in the same cluster is critical for reaping the b
 
 To connect Cassandra nodes in a cluster, update the cassandra.yaml configuration file with the same cluster name and seed nodes across all instances. Inside the cassandra pod, locate the yaml file at /etc/cassandra/cassandra.yaml
 
-[](https://drive.google.com/file/d/1h2RG4JZUR4BSdyvOZ-L2Ul0Y03z5-Fmi/view?usp=share_link)
+![](https://drive.google.com/uc?export=view&id=1h2RG4JZUR4BSdyvOZ-L2Ul0Y03z5-Fmi)
 
 Scroll down until you locate the *seed_provider* section and edit the seeds with the actual IP address assigned to each cassandra pods.
+
+![](https://drive.google.com/uc?export=view&id=1HEOaNA2C_E93m9EWCajzIgyPn63rIVPW)
 
 Lookup the IP address of the cassandra prods:
 
@@ -358,7 +368,8 @@ $ kubectl get pods -o wide
 ```
 $ kubectl get nodes -o custom-columns=NAME:.metadata.name,PROVIDER:.spec.provider ID
 ```
-![]()
+![](https://drive.google.com/uc?export=view&id=16vz2r9fgl5whCvDxN3GlPOjGJVLDfWoa)
+
 The output should look similar to this and look for the name of the provider, in our case it is Linode.
 
 - **Step 2** CheckInstalled CSI Driver:
@@ -735,6 +746,223 @@ $ cd operator_k8s
 
 ### F. Deploying and Configuring Splunk
 
+**To deploy Splunk Enterprise by using Splunk Operator.** <br>
+- **Step 1** is to install Splunk Operator to the Kubernetes cluster using this command. <br>
+```
+$ kubectl apply -f https://github.com/splunk/splunk-operator/releases/download/2.4.0/splunk-operator-cluster.yaml --server-side  --force-conflicts
+```
+ 
+- **Step 1.a** Use kubectl get pods to confirm if it’s already running. <br> <br>
+   ![Image description](https://drive.google.com/uc?export=view&id=1-ll_9t-68Cbj_srKmrhY61XzPlVAZq0A)
+    - **Step 1.b** To create an instance, you create this yaml file and run this command.
+ 
+    ```
+    apiVersion: enterprise.splunk.com/v4
+    kind: Standalone
+    metadata:
+        name: s1
+        finalizers:
+        - enterprise.splunk.com/delete-pvc
+    ```
+    
+    ```
+    $ kubectl apply -n splunk-operator -f enterprise.yaml
+    ```
+    - **Step 1.c** Next is to determine the port used to access the web UI. <br> <br>
+    ![Image description](https://drive.google.com/uc?export=view&id=1o5CYDa8UgDts5X2ouI18l7S2yZGWFu6n)
+    - **Step 1.d** Get the credentials with default username admin use this command and decode the password.
+    ![Image description](https://drive.google.com/uc?export=view&id=13JZhrBkFQSJ5n04h1I07Rpz4JUdyzZgR)
+ 
+        ```
+        $ echo cVZEamFVVDROZTFFRkg3YWVRYmcxRzk1 | base64 –d
+        ```
+ 
+    ![Image description](https://drive.google.com/uc?export=view&id=1dlfOFozW2L9mHghQ4NgVDUPlWsBmEFi8)
+ 
+    ![Image description](https://drive.google.com/uc?export=view&id=1fQ75bqI84YPgjTKg8g7YooCQuuiwvQ4e)
+ 
+This article provides a [Installation for Splunk Operator](https://splunk.github.io/splunk-operator/#installing-the-splunk-operator) for quick reference. You can also watch this [Video](https://www.youtube.com/watch?v=Qlm0VPackh8&t=625s).
+ 
+- **Step2** Configure HTTP Event Collector on Splunk Enterprise
+    
+    - **Step 2.b** Enable HTTP Event Collector on Splunk Enterprise
+ 
+        **NOTE** Before you can use Event Collector to receive events through HTTP, you must enable it. For Splunk Enterprise, enable HEC through the Global Settings dialog box.
+ 
+        - Click Settings > Data Inputs.
+ 
+        - Click HTTP Event Collector.
+ 
+        - Click Global Settings.
+ 
+        - In the All-Tokens toggle button, select Enabled.
+ 
+        - **(Optional)** Choose a Default Source Type for all HEC tokens. You can also type in the name of the source type in the text field above the drop-down list box before choosing the source type.
+ 
+        - **(Optional)** Choose a Default Index for all HEC tokens.
+ 
+        - **(Optional)** Choose a Default Output Group for all HEC tokens.
+ 
+        - **(Optional)** To use a deployment server to handle configurations for HEC tokens, click the Use Deployment Server check box.
+ 
+        - **(Optional)** To have HEC listen and communicate over HTTPS rather than HTTP, click the Enable SSL checkbox.
+ 
+        - **(Optional)** Enter a number in the HTTP Port Number field for HEC to listen on.
+ 
+        - **Click Save.**
+ 
+    - **Step 2.b**
+ 
+        **NOTE:** To use HEC, you must configure at least one token.
+ 
+        - Click Settings
+ 
+        ![Image description](https://drive.google.com/uc?export=view&id=1tp42Cn9yoXyRcynd7CshTdsa5sX1acOF)
+ 
+        - Click Monitor
+ 
+        ![Image description](https://drive.google.com/uc?export=view&id=1LJ6I_atDJ7idaUoxS8rodyHONpT7tUh-)
+ 
+        - Click HTTP Event Collector, In the Name field, enter a name for the token.
+ 
+        ![Image description](https://drive.google.com/uc?export=view&id=1wa-yh3ifot_-jVd30xBQ0EB6sqa6GrTa)
+ 
+        - Confirm that all settings for the endpoint are what you want. If all settings are what you want, click Submit. Otherwise, click < to make changes.
+ 
+        ![Image description](https://drive.google.com/uc?export=view&id=1JyGbTL2K2Q-spRb4V5ClFMn2couVTpDR)
+        
+         **(Optional)** Copy the token value that Splunk Web displays and paste it into another document for reference later.
+ 
+        ![Image description](https://drive.google.com/uc?export=view&id=1AM6r5g7a8pyGhRWAw0RycSLgIzOco6Q2)
+ 
+For easy reference, this article offers a [HTTP Event Collector in Splunk Enterprise](https://docs.splunk.com/Documentation/Splunk/8.2.0/Data/UsetheHTTPEventCollector#Configure_HTTP_Event_Collector_on_Splunk_Enterprise).
+ 
+- **Step 3** Next is to set up Splunk OTEL Collector.
+    - **Step 3.a** Use this command
+    
+    ```
+    helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart
+    ```
+    ```
+    wget https://github.com/signalfx/splunk-otel-collector-chart/releases/download/splunk-otel-collector-0.86.1/splunk-otel-collector-0.86.1.tgz
+    ```
+    ```
+    tar -xzvf splunk-otel-collector-0.86.1.tgz
+    ```
+Next is to set up values.yaml file refer to this [Documentation](https://docs.rafay.co/recipes/logging/splunk-otel-collector/splunk/#assumptions)
+ 
+```
+################################################################################
+# clusterName is a REQUIRED. It can be set to an arbitrary value that identifies
+# your K8s cluster. The value will be associated with every trace, metric and
+# log as "k8s.cluster.name" attribute.
+################################################################################
+ 
+clusterName: "lke146616"
+ 
+################################################################################
+# Splunk Cloud / Splunk Enterprise configuration.
+################################################################################
+ 
+# Specify `endpoint` and `token` in order to send data to Splunk Cloud or Splunk
+# Enterprise.
+splunkPlatform:
+  # Required for Splunk Enterprise/Cloud. URL to a Splunk instance to send data
+  # to. e.g. "http://X.X.X.X:8088/services/collector/event". Setting this parameter
+  # enables Splunk Platform as a destination. Use the /services/collector/event
+  # endpoint for proper extraction of fields.
+  endpoint: "http://139.162.36.121:30056"
+  # Required for Splunk Enterprise/Cloud (if `endpoint` is specified). Splunk
+  # Alternatively the token can be provided as a secret.
+  # Refer to https://github.com/signalfx/splunk-otel-collector-chart/blob/main/docs/advanced-configuration.md#provide-tokens-as-a-secret
+  # HTTP Event Collector token.
+  token: "ba539994-032a-47e3-bd86-38894400365d"
+ 
+  # Name of the Splunk event type index targeted. Required when ingesting logs to Splunk Platform.
+  index: "kube_cluster"
+  # Name of the Splunk metric type index targeted. Required when ingesting metrics to Splunk Platform.
+  metricsIndex: "kube_cluster_metrics"
+  # Name of the Splunk event type index targeted. Required when ingesting traces to Splunk Platform.
+  tracesIndex: ""
+  # Optional. Default value for `source` field.
+  source: "kubernetes"
+  # Optional. Default value for `sourcetype` field. For container logs, it will
+  # be container name.
+  sourcetype: ""
+  # Maximum HTTP connections to use simultaneously when sending data.
+  maxConnections: 200
+  # Whether to disable gzip compression over HTTP. Defaults to true.
+  disableCompression: true
+  # HTTP timeout when sending data. Defaults to 10s.
+  timeout: 10s
+  # Idle connection timeout. defaults to 10s
+  idleConnTimeout: 10s
+  # Whether to skip checking the certificate of the HEC endpoint when sending
+  # data over HTTPS.
+  insecureSkipVerify: true
+  # The PEM-format CA certificate for this client.
+  # Alternatively the clientCert, clientKey and caFile can be provided as a secret.
+  # Refer to https://github.com/signalfx/splunk-otel-collector-chart/blob/main/docs/advanced-configuration.md#provide-tokens-as-a-secret
+  # NOTE: The content of the certificate itself should be used here, not the
+  #       file path. The certificate will be stored as a secret in kubernetes.
+  clientCert: ""
+  # The private key for this client.
+  # NOTE: The content of the key itself should be used here, not the file path.
+  #       The key will be stored as a secret in kubernetes.
+  clientKey: ""
+  # The PEM-format CA certificate file.
+  # NOTE: The content of the file itself should be used here, not the file path.
+  #       The file will be stored as a secret in kubernetes.
+  caFile: ""
+ 
+  # Options to disable or enable particular telemetry data types that will be sent to
+  # Splunk Platform. Only logs collection is enabled by default.
+  logsEnabled: true
+  # If you enable metrics collection, make sure that `metricsIndex` is provided as well.
+  metricsEnabled: true
+ 
+################################################################################
+# Logs collection engine:
+# - `fluentd`: deploy a fluentd sidecar that will collect logs and send them to
+#   otel-collector agent for further processing.
+# - `otel`: utilize native OpenTelemetry log collection.
+#
+# `fluentd` will be deprecated soon, so it's recommended to use `otel` instead.
+################################################################################
+ 
+logsEngine: otel
+ 
+################################################################################
+# Cloud provider, if any, the collector is running on. Leave empty for none/other.
+# - "aws" (Amazon Web Services)
+# - "gcp" (Google Cloud Platform)
+# - "azure" (Microsoft Azure)
+################################################################################
+ 
+cloudProvider: ""
+ 
+################################################################################
+# Kubernetes distribution being run. Leave empty for other.
+# - "aks" (Azure Kubernetes Service)
+# - "eks" (Amazon Elastic Kubernetes Service)
+# - "eks/fargate" (Amazon Elastic Kubernetes Service with Fargate profiles )
+# - "gke" (Google Kubernetes Engine / Standard mode)
+# - "gke/autopilot" (Google Kubernetes Engine / Autopilot mode)
+# - "openshift" (RedHat OpenShift)
+################################################################################
+ 
+distribution: ""
+ 
+```
+ 
+```
+helm -n splunk-operator install my-splunk-otel-collector -f /Users/acadb517/otel/splunk-otel-collector/values.yaml splunk-otel-collector-chart/splunk-otel-collector
+```
+ 
+![Image description](https://drive.google.com/uc?export=view&id=1DK95DP9yJH_i2Jlq37Ycd2dcXx5hKogE)
+ 
+![Image description](https://drive.google.com/uc?export=view&id=1IeJq3mvbOhCEsfAwKyB44_wkSk7d_JO7)
+ 
 <br>
 
 ### G. Building Dashboards with Grafana
@@ -747,7 +975,7 @@ $ cd operator_k8s
 
 ## Glossary
 
-- **Automation**
+- **Automation**: 
 - **Cassandra ring**: Describes a resilient and distributed group of Cassandra nodes capable of handling faults.
 - **CICD**
 - **Cluster**
@@ -770,4 +998,4 @@ $ cd operator_k8s
 - **Repository**
 - **Service** (Kubernetes): Service in kubernetes facilitates the communication between different parts of the application and others outside of it and assists us in establishing connections between apps and other apps or users.
 - **StatefulSet**: A Kubernetes controller that ensures the order and uniqueness of pods, particularly in the Cassandra context. This guarantees stable network identities and persistent storage for individual nodes in the cluster.
-- **YAML**
+
