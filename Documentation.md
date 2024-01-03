@@ -827,14 +827,13 @@ $ kubectl exec -it <pod-name> – /bin/bash
 - **Step 8** Use the credentials in any jobs/projects 
 - **Step 9** Setup Pipeline
   - #Declare
-    
+    ![](https://drive.google.com/uc?export=view&id=1girhkICN9uooMMwJ8TDziOS22My4QSss)
   - #Build Stage
-  - #Push Stage
-  - #Deploy Stable web app
+    ![](https://drive.google.com/uc?export=view&id=1852Lp9jD2wCDeXX9LT5-WImd8czEJDi9)
   - #Deploy Canary
-  - #Build Success Test
+    ![](https://drive.google.com/uc?export=view&id=1wLuvrzfXQBubaK0xrf-6IbHEd184De6F)
   - #Canary Production
-
+    ![](https://drive.google.com/uc?export=view&id=1RnKAA2zpZ6ND4l6NZEV4ayxc9h6wkevc)
 
 <br>
 
