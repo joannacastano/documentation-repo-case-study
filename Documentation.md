@@ -18,6 +18,7 @@ Although having some knowledge of distributed systems and Kubernetes is advantag
 [x] **Ops Simulation:** Deliberately introduce errors to the system to replicate operational accidents and routine maintenance scenarios.
 
 <br>
+
 ## Methodology
 
 ### A. Accessing the Kubernetes Cluster
@@ -376,6 +377,7 @@ $ kubectl apply -f cassandra-statefulset.yaml
 ```
 Since the statefulset yaml file is in our local directory, we can proceed to deploy this directly using the file.
 <br>
+
 ### D. Creating the web app and Docker image
 
 Since we had the freedom to choose any framework in creating the web application, we decided to use Flask, a Python-based web framework that can support Cassandra.
@@ -698,6 +700,7 @@ passlib==1.7.4
 #### D.1 Build and deployment through Jenkins
 
 <br>
+
 ### E. Deploying and Configuring Prometheus
 
 Prometheus is an open-source alerting and monitoring toolkit that provides real-time application and system health metrics. It aids developers and administrators in understanding their app's behavior and performance by giving valuable insights to ensure the system is at its peak performance.
@@ -729,6 +732,7 @@ $ cd operator_k8s
   - **3.d** Check underlying pods
 - **Step 4** Create a Prometheus service
 <br>
+
 ### F. Deploying and Configuring Splunk
 
 <br>
@@ -736,6 +740,7 @@ $ cd operator_k8s
 ### G. Building Dashboards with Grafana
 
 <br>
+
 ## Runbook
 
 <br>
