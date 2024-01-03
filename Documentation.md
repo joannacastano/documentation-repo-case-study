@@ -150,8 +150,232 @@ Please use the following password to proceed to installation:
 
 Cassandra is a NoSQL database. Its query language is very similar to SQL, however its structure is entirely different. It is designed to handle large amounts of data with high reliability and scalability. This makes Cassandra an optimal database choice for scalable solutions.
 
+We'll be deploying Cassandra with a Statefulset. This method is taken from the [official Kubernetes Documentation](https://kubernetes.io/docs/tutorials/stateful-application/cassandra/).
+
+- **Step 1** Create a headless Service for Cassandra. We'll name this file as **cassandra-service.yaml**
+The following Service is used for DNS lookups between Cassandra Pods and clients within your cluster:
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: cassandra
+  name: cassandra
+spec:
+  clusterIP: None
+  ports:
+  - port: 9042
+  selector:
+    app: cassandra
+```
+- **Step 2** Build a Cassandra ring with three pods using a StatefulSet. Creating a Cassandra ring using a StatefulSet in Kubernetes involves configuring and deploying Cassandra instances in a scalable and persistent manner. 
+
+  - **Step 2.a** Create the manifest file for the statefulset. We will name this file cassandra-statefulset.yaml
+    ```
+    apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+    name: cassandra
+    labels:
+        app: cassandra
+    spec:
+    serviceName: cassandra
+    replicas: 3
+    selector:
+        matchLabels:
+        app: cassandra
+    template:
+        metadata:
+        labels:
+            app: cassandra
+        spec:
+        terminationGracePeriodSeconds: 1800
+        containers:
+        - name: cassandra
+            image: louis5566/cassandra:amd64
+            imagePullPolicy: Always
+            ports:
+            - containerPort: 7000
+            name: intra-node
+            - containerPort: 7001
+            name: tls-intra-node
+            - containerPort: 7199
+            name: jmx
+            - containerPort: 9042
+            name: cql
+            resources:
+            limits:
+                cpu: "500m"
+                memory: 1Gi
+            requests:
+                cpu: "500m"
+                memory: 1Gi
+            securityContext:
+            capabilities:
+                add:
+                - IPC_LOCK
+            lifecycle:
+            preStop:
+                exec:
+                command: 
+                - /bin/sh
+                - -c
+                - nodetool drain
+            env:
+            - name: MAX_HEAP_SIZE
+                value: 512M
+            - name: HEAP_NEWSIZE
+                value: 100M
+            - name: CASSANDRA_SEEDS
+                value: "cassandra-0.cassandra.default.svc.cluster.local"
+            - name: CASSANDRA_CLUSTER_NAME
+                value: "K8Demo"
+            - name: CASSANDRA_DC
+                value: "DC1-K8Demo"
+            - name: CASSANDRA_RACK
+                value: "Rack1-K8Demo"
+            - name: POD_IP
+                valueFrom:
+                fieldRef:
+                    fieldPath: status.podIP
+            readinessProbe:
+            exec:
+                command:
+                - /bin/bash
+                - -c
+                - /ready-probe.sh
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+            volumeMounts:
+            - name: cassandra-data
+            mountPath: /cassandra_data
+    volumeClaimTemplates:
+    - metadata:
+        name: cassandra-data
+        spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: linode-block-storage
+        resources:
+            requests:
+            storage: 10Gi
+    ---
+    kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+    name: linode-block-storage
+    annotations:
+        kubectl.kubernetes.io/last-applied-configuration: |
+        {"allowVolumeExpansion":true,"apiVersion":"storage.k8s.io/v1","kind":"StorageClass","metadata":{"annotations":{"lke.linode.com/caplke-version":"v1.28.3-001"},"name":"linode-block-storage"},"provisioner":"linodebs.csi.linode.com"}
+        lke.linode.com/caplke-version: v1.28.3-001
+    provisioner: linodebs.csi.linode.com
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    allowVolumeExpansion: true
+    ```
+    **NOTE:** The fields *spec.spec.image*, *metadata.name* (in StorageClass), and *provisioner* (in StorageClass) are modified according to the cloud environment provisioner utilized in our cluster. Specifically, we're utilizing a custom Cassandra image on Kubernetes in our scenario with the provisioner linodebs.csi.linode.com and a storage class of linode-block-storage. To determine the cloud provider, examine the configuration and metadata available to the cluster. More information regarding the ways to identify the cloud environment can be found in section C.1.
+
+    Below is the Dockerfile of our custom Cassandra image. A custom image was made so we could install and have a python package in our Cassandra deployment. We'll need this for running Cassandra Query Language in its shell.
+
+    ```
+    #!/bin/bash
+    # Use the official Cassandra base image for AMD64
+    FROM cassandra:latest
+
+    WORKDIR ./
+
+    USER root
+    # Expose Cassandra ports
+    EXPOSE 7000 7001 7199 9042 9160
+
+    # Custom configurations or additional setup can be added here if needed
+
+    RUN apt-get update && \
+    apt-get install -y python3 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+    USER cassandra
+    COPY ready-probe.sh /ready-probe.sh
+
+    # Start Cassandra when the container starts
+    CMD ["cassandra", "-f"]
+    ```
+
+  - **Step 2.b** Verify the integrity of the Cassandra StatefulSet.
+    ```
+    Get the list of active Cassandra statefulset
+    $ kubectl get statefulset
+
+    Display the pods and observe the creation status
+    $ kubectl get pods -l="app=cassandra"
+
+    Execute the Cassandra node tool within the initial Pod to show case the status of the ring.
+    $ kubectl exec -it cassandra-0 -- nodetool status
+    ```
+- **Step 3** (Optional) Scale the Cassandra StatefulSet
+In Kubernetes, scaling a StatefulSet entails adding or decreasing the number of replicas (pods) for the StatefulSet. Scaling the StatefulSet in the context of Cassandra operating in Kubernetes allows you to add or remove Cassandra nodes to adjust to changes in workload, performance requirements, or other operational demands.
+
+```
+$ kubectl scale statefulsets <stateful-set-name> --replicas=<new-replicas>
+```
+- **Step 4** Creating a Unified Cassandra Cluster
+The presence of Cassandra pods in the same cluster is critical for reaping the benefits of distributed databases. It offers scalability, fault tolerance, and efficient data dissemination, ensuring Cassandra's best performance in a distributed and dynamic context.
+
+To connect Cassandra nodes in a cluster, update the cassandra.yaml configuration file with the same cluster name and seed nodes across all instances. Inside the cassandra pod, locate the yaml file at /etc/cassandra/cassandra.yaml
+
+[](https://drive.google.com/file/d/1h2RG4JZUR4BSdyvOZ-L2Ul0Y03z5-Fmi/view?usp=share_link)
+
+Scroll down till you locate the seed_provider section and edit the seeds with the actual IP address assigned to each cassandra pods.
+
+Lookup the IP address of the cassandra prods:
+
+```
+$ kubectl get pods -o wide
+```
+
+- **Step 5** Configure the cassandra.yaml file inside the pod.
+   - **Step 5.a** Copy cassandra.yaml from the pod to your local machine for it    to be edit
+     ```
+     $ kubectl cp <your-cassandra-pod-name>:/etc/cassandra/cassandra.yaml ./cassandra.yaml
+     ```
+   - **Step 5.b** Edit the cassandra.yaml file on your local machine using your    preferred text editor
+   - **Step 5.c** Move the edited file back to the pod
+     ```
+     $ kubectl cp ./cassandra.yaml <your-cassandra-pod-name>:/etc/cassandra/cassandra.yaml
+     ```
+   - **Step 5.d** Verify Cluster Status. This command will display information about the nodes in the Cassandra cluster. Verify that all nodes are in the "UN" (Up and Normal) state.
+     ```
+     $ kubectl exec -it -- /bin/bash Nodetool status
+     ```
+   - **Step 5.e** Repeat this process for the other Cassandra pods to ensure       consistency. If you see all nodes in the "UN" state, it indicates that your       Cassandra pods are part of the same cluster.
 <br>
 
+#### C.1 Determining the cloud provider by examining the configuration and metadata available to the cluster.
+
+- **Step 1** Check Kubernetes ProviderID: Each node in a Kubernetes cluster has a ProviderID associated with it. You can check the provider ID of a node to identify the underlying cloud provider by using this command:
+```
+$ kubectl get nodes -o custom-columns=NAME:.metadata.name,PROVIDER:.spec.provider ID
+```
+![]()
+The output should look similar to this and look for the name of the provider, in our case it is linode.
+
+- **Step 2** CheckInstalled CSI Driver:
+Verify that the Linode CSI driver is installed in your cluster. You can check the installed CSI drivers using the following command:
+```
+$ kubectl get csidrivers
+```
+- **Step 3** Inspect Storage Classes: Examine the Storage Classes available in your cluster to see if there is a Linode-specific storage class configured. You can use the following command:
+```
+$ kubectl get storageclass
+```
+Check if there is a storage class with the provisioner set to linodebs.csi.linode.com. This storage class is typically used for dynamic provisioning of Linode block storage volumes.
+- **Step 4** Create the Cassandra StatefulSet from the cassandra-statefulset.yaml file
+```
+$ kubectl apply -f cassandra-statefulset.yaml
+```
+Since the statefulset yaml file is in our local directory, we can proceed to deploy this directly using the file.
+<br>
 ### D. Creating the web app and Docker image
 
 Since we had the freedom to choose any framework in creating the web application, we decided to use Flask, a Python-based web framework that can support Cassandra.
@@ -505,7 +729,7 @@ $ cd operator_k8s
   - **3.b** Deploy the manifest
   - **3.c** Verify the deployment
   - **3.d** Check underlying pods
-- **Step 4** Create a Prometheus servicw
+- **Step 4** Create a Prometheus service
 ### F. Deploying and Configuring Splunk
 
 <br>
