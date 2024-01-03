@@ -382,7 +382,7 @@ Since the statefulset yaml file is in our local directory, we can proceed to dep
 
 Since we had the freedom to choose any framework in creating the web application, we decided to use Flask, a Python-based web framework that can support Cassandra.
 
-We created a simple To-do app that has authentication and can do CRUD processes.
+We created a simple To-do app that has authentication and can do CREATE, READ, DELETE processes.
 
 - **Step 1** Create a flask environment by following this [guide from Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask).
 
@@ -752,7 +752,6 @@ $ cd operator_k8s
 - **CICD**
 - **Cluster**
 - **Containers**
-- **CRUD**
 - **Database/Keyspace** (Cassandra)
 - **Dependencies**
 - **Dockerfile**
