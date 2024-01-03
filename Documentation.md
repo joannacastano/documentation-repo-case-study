@@ -3,7 +3,7 @@
 Adviser: Melvin Bautista:
 Authors: Louis Anthony Bernante, Joanna Lorraine Castaño, Lorenzo Lucin Jr., Joshua Villa
 ```
-This case study provides an extensive overview of the procedures involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, creating the web app and its Docker image, deploying and configuring the Cassandra database image, as well as orchestrating Jenkins, Prometheus, Grafana, and Splunk. The Runbook expressly covers probable issues, including 4xx and 5xx faults, and provides a Disaster Recovery Plan. 
+This case study provides an extensive overview of the procedures involved in successfully implementing and operating a web application seamlessly linked to a NoSQL database. This document provides a comprehensive description, including objectives, an architecture diagram, workflows, and a discussion of the solution's features. The methodology section offers a systematic procedure, leading the reader through the process of setting up a ready-made Kubernetes cluster, creating the web app and its Docker image, deploying and configuring the Cassandra database image, as well as orchestrating Jenkins, Prometheus, Grafana, and Splunk. The Runbook expressly covers probable issues and how to solve them. 
 
 Although having some knowledge of distributed systems and Kubernetes is advantageous, our goal is to enable readers with different degrees of expertise. A glossary is included in the final section of this document for convenient reference.
 <br>
@@ -399,16 +399,32 @@ We created a simple To-do app that has authentication and can do CREATE, READ, D
 
 However for this solution, **app.py** should look like this:
 ```
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 from cassandra.cluster import Cluster
 from passlib.hash import sha256_crypt
-import uuid, time
 
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+import uuid, time
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 app.secret_key = app.config['SECRET_KEY']
 
+tracer_provider = TracerProvider()
+trace.set_tracer_provider(tracer_provider)
+
+exporter = OTLPSpanExporter(
+   endpoint="http://139.162.36.121:30056", 
+   headers={"Authorization": "Bearer ba539994-032a-47e3-bd86-38894400365d"},
+)
+
+tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
+
+tracer = trace.get_tracer_provider().get_tracer(__name__)
 
 MAX_RETRIES = 5
 RETRY_INTERVAL = 5 # seconds
@@ -429,7 +445,10 @@ for _ in range(MAX_RETRIES):
 if session_db is None:
     @app.errorhandler(500)
     def internal_server_error(e):
-        return render_template('500.html'), 500
+        with tracer.start_as_current_span("500") as span:
+            resp = make_response(render_template('500.html'))
+            span.set_attribute("http.status_code", 500)
+        return resp
 
 else:
     session_db.set_keyspace('todoapp')
@@ -463,69 +482,100 @@ else:
     # Home route
     @app.route('/')
     def home():
-        if is_logged_in():
-            return redirect(url_for('todolist'))
-        return redirect(url_for('login'))
+        with tracer.start_as_current_span("home") as span:
+            if is_logged_in():
+                resp = make_response(redirect(url_for('todolist')))
+            else:
+                resp = make_response(redirect(url_for('login')))
+            if span.is_recording():
+                span.set_attribute("http.status_code", resp.status_code)
+        return resp
 
     # Login route
     @app.route('/login', methods=['GET', 'POST'])
     def login():
-        if request.method == 'POST':
-            username = request.form['username']
-            password_candidate = request.form['password']
+        with tracer.start_as_current_span("login") as span:
+            if request.method == 'POST':
+                username = request.form['username']
+                password_candidate = request.form['password']
 
-            # Fetch user from database
-            result = session_db.execute("SELECT id, password FROM users WHERE username = %s ALLOW FILTERING", (username,))
-            user_data = result.one()
+                # Fetch user from database
+                result = session_db.execute("SELECT id, password FROM users WHERE username = %s ALLOW FILTERING", (username,))
+                user_data = result.one()
 
-            if user_data and sha256_crypt.verify(password_candidate, user_data.password):
-                session['username'] = username
-                flash('You are now logged in', 'success')
-                return redirect(url_for('todolist'))
+                if user_data and sha256_crypt.verify(password_candidate, user_data.password):
+                    session['username'] = username
+                    flash('You are now logged in', 'success')
+                    resp = make_response(redirect(url_for('todolist')))
+                    if span.is_recording():
+                        span.set_attribute("http.status_code", 200)
+                else:
+                    flash('Invalid login', 'danger')
+                    resp = make_response(render_template('login.html'), 401)
+                    if span.is_recording():
+                        span.set_attribute("http.status_code", 200)
             else:
-                flash('Invalid login', 'danger')
-
-        return render_template('login.html')
+                resp = make_response(render_template('login.html'))
+                if span.is_recording():
+                    span.set_attribute("http.status_code", resp.status_code)
+        return resp
 
     # Logout route
     @app.route('/logout')
     def logout():
-        session.clear()
-        flash('You are now logged out', 'success')
-        return redirect(url_for('login'))
+        with tracer.start_as_current_span("logout") as span:
+            session.clear()
+            flash('You are now logged out', 'success')
+            resp = make_response(redirect(url_for('login')))
+            if span.is_recording():
+                span.set_attribute("http.status_code", 200)
+        return resp
 
     # Signup route
     @app.route('/signup', methods=['GET', 'POST'])
     def signup():
-        if request.method == 'POST':
-            username = request.form['username']
-            password = sha256_crypt.encrypt(request.form['password'])
+        with tracer.start_as_current_span("signup") as span:
+            if request.method == 'POST':
+                username = request.form['username']
+                password = sha256_crypt.encrypt(request.form['password'])
 
-            # Check if username already exists
-            result = session_db.execute("SELECT * FROM users WHERE username = %s ALLOW FILTERING", (username,))
-            existing_user = result.one()
+                # Check if username already exists
+                result = session_db.execute("SELECT * FROM users WHERE username = %s ALLOW FILTERING", (username,))
+                existing_user = result.one()
 
-            if existing_user:
-                flash('Username already exists', 'danger')
-                return redirect(url_for('signup'))
+                if existing_user:
+                    flash('Username already exists', 'danger')
+                    resp = make_response(redirect(url_for('signup')))
+                    if span.is_recording():
+                        span.set_attribute("http.status_code", 409)
+                    return resp
 
-            # Generate UUID in Python
-            user_id = uuid.uuid4()
+                # Generate UUID in Python
+                user_id = uuid.uuid4()
 
-            # Insert new user into the database
-            session_db.execute("INSERT INTO users (id, username, password) VALUES (%s, %s, %s)", (user_id, username, password))
+                # Insert new user into the database
+                session_db.execute("INSERT INTO users (id, username, password) VALUES (%s, %s, %s)", (user_id, username, password))
 
-            flash('You are now registered and can log in', 'success')
-            return redirect(url_for('login'))
+                flash('You are now registered and can log in', 'success')
+                resp = make_response(redirect(url_for('login')))
+                if span.is_recording():
+                    span.set_attribute("http.status_code", 201)
+                return resp
 
-        return render_template('signup.html')
+            resp = make_response(render_template('signup.html'))
+            if span.is_recording():
+                span.set_attribute("http.status_code", 200)
+            return resp
 
 
-    # To-do list route
-    @app.route('/todolist')
-    def todolist():
+@app.route('/todolist')
+def todolist():
+    with tracer.start_as_current_span("todolist") as span:
         if not is_logged_in():
-            return redirect(url_for('login'))
+            resp = make_response(redirect(url_for('login')))
+            if span.is_recording():
+                span.set_attribute("http.status_code", 302)
+            return resp
 
         username = session['username']
 
@@ -533,13 +583,20 @@ else:
         result = session_db.execute("SELECT * FROM todos WHERE username = %s ALLOW FILTERING", (username,))
         todos = result.all()
 
-        return render_template('todolist.html', todos=todos)
+        resp = make_response(render_template('todolist.html', todos=todos))
+        if span.is_recording():
+            span.set_attribute("http.status_code", 200)
+        return resp
 
-    # Add task route
-    @app.route('/add_task', methods=['POST'])
-    def add_task():
+# Create/Add task route
+@app.route('/add_task', methods=['POST'])
+def add_task():
+    with tracer.start_as_current_span("add_task") as span:
         if not is_logged_in():
-            return redirect(url_for('login'))
+            resp = make_response(redirect(url_for('login')))
+            if span.is_recording():
+                span.set_attribute("http.status_code", 302)
+            return resp
 
         task = request.form['task']
         username = session['username']
@@ -549,23 +606,33 @@ else:
         session_db.execute("INSERT INTO todos (username, task_id, task) VALUES (%s, %s, %s)", (username, task_id, task))
 
         flash('Task added', 'success')
-        return redirect(url_for('todolist'))
-
-    # Delete task route
-    @app.route('/delete_task/<string:task_id>', methods=['POST'])
-    def delete_task(task_id):
+        resp = make_response(redirect(url_for('todolist')))
+        if span.is_recording():
+            span.set_attribute("http.status_code", 201)
+        return resp
+    
+# Delete task route
+@app.route('/delete_task/<string:task_id>', methods=['POST'])
+def delete_task(task_id):
+    with tracer.start_as_current_span("delete_task") as span:
         if not is_logged_in():
-            return redirect(url_for('login'))
+            resp = make_response(redirect(url_for('login')))
+            if span.is_recording():
+                span.set_attribute("http.status_code", 302)
+            return resp
 
         # Delete task from the database
         session_db.execute("DELETE FROM todos WHERE task_id = %s", (uuid.UUID(task_id),))
 
         flash('Task deleted', 'success')
-        return redirect(url_for('todolist'))
+        resp = make_response(redirect(url_for('todolist')))
+        if span.is_recording():
+            span.set_attribute("http.status_code", 202)
+        return resp
+
    
 if __name__ == '__main__':
-    app.run(debug=True)          #This should be false when in production
-
+    app.run(debug=True)
 ```
 **IMPORTANT NOTE:** The file **config.py** holds the SECRET_KEY for this app. You may create your own **config.py** and the SECRET_KEY can be any string. This file is hidden from you for data privacy.
 
@@ -975,27 +1042,43 @@ helm -n splunk-operator install my-splunk-otel-collector -f /Users/acadb517/otel
 
 ## Glossary
 
-- **Automation**: 
+- **Automation**: A method that uses technology to do tasks so that there is less human intervention.
+  
 - **Cassandra ring**: Describes a resilient and distributed group of Cassandra nodes capable of handling faults.
-- **CICD**
-- **Cluster**
-- **Containers**
-- **Database/Keyspace** (Cassandra)
-- **Dependencies**
-- **Dockerfile**
-- **Framework**
+  
+- **CICD**: A software development practice that involves automating the process in the software development cycle.
+  
+- **Containers**: An isolated and running image of an application.
+  
+- **Dependencies**: A list of libraries or packages that are needed for an application to run properly.
+  
+- **Dockerfile**: A list of instructions and commands in order to build an image of an application.
+  
 - **Headless service** (Kubernetes): A headless service in Kubernetes is a service with a service IP but without load balancing. Each pod in the StatefulSet gets its DNS record, allowing direct communication between Cassandra nodes.
-- **Image**
-- **Load Balancer**
-- **Logs**
-- **Metrics**
-- **Node**
-- **NodePort**
-- **NoSQL**
-- **Pipelines**
-- **Pods**
-- **Plugins**
-- **Repository**
+  
+- **Image**: In Docker, an image contains all the things you need to run an application, including the application itself. This ensures that application's deployed using this image is standardized.
+  
+- **Keyspace** (Cassandra): Its a storage unit that holds Tables. It separates a collection of Tables, allowing for organization and managaement of various data.
+  
+- **Load Balancer**: Distributes network traffic across different servers or computing resources. 
+  
+- **Logs**: A collection of captured events, activities, and messages made by an application or a service.
+  
+- **Metrics**: Data that can quantitatively describe a system's health and performance.
+  
+- **Node**: In Kubernetes, a node is machine that is a part of a cluster.
+  
+- **NodePort**: A service in Kubernetes that exposes an application to the public.
+  
+- **Pipelines**: A set of automated process for CICD.
+  
+- **Pods**: Represents an instance of a running instance. Holds the container of an application.
+  
+- **Plugin**: A software component that can either extend or enhance a system or application's functionality.
+  
+- **Repository**: Contains a collection of files and folders for specific projects. A famous repository platform is GitHub.
+  
 - **Service** (Kubernetes): Service in kubernetes facilitates the communication between different parts of the application and others outside of it and assists us in establishing connections between apps and other apps or users.
+  
 - **StatefulSet**: A Kubernetes controller that ensures the order and uniqueness of pods, particularly in the Cassandra context. This guarantees stable network identities and persistent storage for individual nodes in the cluster.
 
